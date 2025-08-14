@@ -1,0 +1,68 @@
+import express from 'express';
+import { connectDB } from './config/db.js';
+import { ENV } from './config/env.js';
+import cors from 'cors';
+import { clerkMiddleware } from "@clerk/express";
+import { arcjetMiddleware } from "./middlewares/arcjet.middleware.js";
+
+import userRoutes from "./routes/user.route.js";
+import postRoutes from "./routes/post.route.js";
+import { protectRoute } from "./middlewares/auth.middleware.js";
+
+// import commentRoutes from "./routes/comment.route.js";
+// import notificationRoutes from "./routes/notification.route.js";
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.use(clerkMiddleware());
+app.use(arcjetMiddleware);
+
+app.get("/", (req, res) => res.send('Hello World!'));
+
+// Test routes for Postman testing
+// app.get("/api/test/public", (req, res) => {
+//     res.json({
+//         message: "This is a public route - no authentication required",
+//         timestamp: new Date().toISOString()
+//     });
+// });
+
+// app.get("/api/test/protected", protectRoute, (req, res) => {
+//     res.json({
+//         message: "This is a protected route - authentication required",
+//         userId: req.userId,
+//         timestamp: new Date().toISOString()
+//     });
+// });
+
+app.use("/api/users", userRoutes);
+app.use("/api/posts", postRoutes);
+// app.use("/api/comments", commentRoutes);
+// app.use("/api/notifications", notificationRoutes);
+
+// error handling middleware
+app.use((err, req, res, next) => {
+    console.error("Unhandled error:", err);
+    res.status(500).json({ error: err.message || "Internal server error" });
+});
+
+const startServer = async () => {
+    try {
+        await connectDB();
+
+        // listen for local development
+        if (ENV.NODE_ENV !== "production") {
+            app.listen(ENV.PORT, () => console.log("Server is up and running on PORT:", ENV.PORT));
+        }
+    } catch (error) {
+        console.error("Failed to start server:", error.message);
+        process.exit(1);
+    }
+};
+
+startServer();
+
+export default app;
