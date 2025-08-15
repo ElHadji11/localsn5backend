@@ -31,7 +31,7 @@ router.get('/:postId', getPostById);
 
 //protected routes
 router.post("/", protectRoute, upload.array('photos', 3), createPost);
-router.post("/testpost", upload.array('photos', 3), createPostTest);
+router.post("/testpost", protectRoute, upload.array('photos', 3), createPostTest);
 router.put('/:postId', protectRoute, updatePost);
 router.delete("/:postId", protectRoute, deletePost);
 router.post('/:postId/reviews', protectRoute, addReviewToPost);

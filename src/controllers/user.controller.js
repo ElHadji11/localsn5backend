@@ -5,8 +5,8 @@ import { getAuth } from "@clerk/express";
 import { clerkClient } from "@clerk/express";
 
 export const getCurrentUser = asyncHandler(async (req, res) => {
-    // User ID is set by the auth middleware
-    const userId = req.userId;
+    // Corr: L'ID vient de l'utilisateur authentifié, pas des params
+    const { userId } = getAuth(req);
     const user = await User.findOne({ clerkId: userId });
 
     if (!user) {
@@ -16,8 +16,8 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-    // User ID is set by the auth middleware
-    const userId = req.userId;
+    // Corr: L'ID vient de l'utilisateur authentifié
+    const { userId } = getAuth(req);
     const updates = req.body;
 
     // Suppression des champs sensibles pour ne pas les mettre à jour
@@ -59,45 +59,35 @@ export const getUserProfile = asyncHandler(async (req, res) => {
 });
 
 export const syncUser = asyncHandler(async (req, res) => {
-    const userId = req.userId;
+    console.log("=== SYNC USER START ===");
+    console.log("Request headers:", req.headers.authorization ? "Token present" : "No token");
 
-    if (!userId) {
-        return res.status(401).json({ message: "Clerk User ID not found in session." });
+    try {
+        const { userId } = getAuth(req);
+        console.log("UserId from getAuth:", userId);
+
+        if (!userId) {
+            console.log("No userId - returning 401");
+            return res.status(401).json({ message: "Clerk User ID not found in session." });
+        }
+
+        console.log("Fetching Clerk user for ID:", userId);
+        const clerkUser = await clerkClient.users.getUser(userId);
+        console.log("Clerk user fetched successfully");
+
+        // Le reste de votre code...
+
+    } catch (error) {
+        console.error("Error in syncUser:", error);
+        console.error("Error details:", {
+            message: error.message,
+            stack: error.stack
+        });
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message
+        });
     }
-
-    const clerkUser = await clerkClient.users.getUser(userId);
-
-    const existingUser = await User.findOne({ clerkId: userId });
-
-    if (existingUser) {
-        existingUser.email = clerkUser.emailAddresses[0]?.emailAddress || existingUser.email;
-        existingUser.username = clerkUser.username || clerkUser.firstName || existingUser.username;
-        existingUser.profilePicture = clerkUser.profileImageUrl || existingUser.profilePicture;
-        existingUser.phoneNumber = clerkUser.phoneNumbers[0]?.phoneNumber || existingUser.phoneNumber; // Mettre à jour si le numéro a été ajouté/vérifié dans Clerk
-        await existingUser.save();
-        return res.status(200).json({ user: existingUser, message: "User already exists and updated." });
-    }
-
-    const userData = {
-        clerkId: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress,
-        username: clerkUser.username || clerkUser.firstName || `user_${userId}`, // Fallback si pas de username
-        // motDePasse: Clerk gère les mots de passe de son côté, ne pas stocker ici
-        role: 'user',
-        phoneNumber: clerkUser.phoneNumbers[0]?.phoneNumber || null,
-        // Ces champs sont optionnels et seront renseignés lors de la demande 'becomeSeller'
-        TypeActivite: null,
-        companyName: null,
-        tailleEntreprise: null,
-        dateDeCréationEntreprise: null,
-        region: null,
-        bio: '',
-        profilePicture: clerkUser.profileImageUrl,
-        badgeVendeurVerifie: false,
-    };
-
-    const newUser = await User.create(userData);
-    res.status(201).json({ user: newUser, message: "User created successfully." });
 });
 
 export const getSellerPosts = asyncHandler(async (req, res) => {
@@ -115,7 +105,7 @@ export const getSellerPosts = asyncHandler(async (req, res) => {
 });
 
 export const becomeSeller = asyncHandler(async (req, res) => {
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req); // L'ID de l'utilisateur authentifié
     const { companyName, TypeActivite, tailleEntreprise, dateDeCréationEntreprise, region, bio } = req.body;
 
     if (!companyName || !TypeActivite || !tailleEntreprise || !region) {
@@ -156,33 +146,6 @@ export const becomeSeller = asyncHandler(async (req, res) => {
     });
 
     res.status(200).json({ user, message: "User successfully upgraded to seller." });
-});
-
-// Password reset verification endpoint
-export const verifyPasswordReset = asyncHandler(async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-        return res.status(400).json({ error: "Reset token is required" });
-    }
-
-    try {
-        // Verify the reset token with Clerk
-        const session = await clerkClient.sessions.verifySession(token);
-
-        if (!session) {
-            return res.status(400).json({ error: "Invalid or expired reset token" });
-        }
-
-        // Token is valid, return success
-        res.status(200).json({
-            message: "Reset token is valid",
-            userId: session.userId
-        });
-    } catch (error) {
-        console.error('Password reset verification error:', error);
-        res.status(400).json({ error: "Invalid or expired reset token" });
-    }
 });
 
 

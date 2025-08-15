@@ -1,6 +1,7 @@
 import User from '../models/user.model.js';
 import Post from '../models/post.model.js';
 import asyncHandler from "express-async-handler";
+import { getAuth } from "@clerk/express";
 
 export const getPosts = asyncHandler(async (req, res) => {
     const posts = await Post.find({ statut: 'actif' })
@@ -40,16 +41,16 @@ export const getHomepagePosts = asyncHandler(async (req, res) => {
 
 
 export const createPost = asyncHandler(async (req, res) => {
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
     const { produit, typeActivite, quantite, prix, unite, description, region, DisponibilityDate, } = req.body;
 
     // `req.files` contiendra le tableau des fichiers uploadés par multer.array()
     const imageFiles = req.files;
 
     const user = await User.findOne({ clerkId: userId });
-    // if (!user || user.role !== 'seller') {
-    //     return res.status(403).json({ message: "Non autorisé : Seuls les vendeurs peuvent créer des annonces." });
-    // }
+    if (!user || user.role !== 'seller') {
+        return res.status(403).json({ message: "Non autorisé : Seuls les vendeurs peuvent créer des annonces." });
+    }
 
     // Validation des champs requis
     if (!produit || !typeActivite || !quantite || !prix || !unite || !DisponibilityDate || !region) {
@@ -107,7 +108,7 @@ export const createPost = asyncHandler(async (req, res) => {
 });
 
 export const createPostTest = asyncHandler(async (req, res) => {
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
     const { produit, typeActivite, quantite, prix, unite, description, region, DisponibilityDate, } = req.body;
 
     // `req.files` contiendra le tableau des fichiers uploadés par multer.array()
@@ -207,7 +208,7 @@ export const searchPosts = asyncHandler(async (req, res) => {
 
 export const updatePost = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
     const updates = req.body;
 
     const post = await Post.findById(postId);
@@ -242,7 +243,7 @@ export const getPostById = asyncHandler(async (req, res) => {
 
 export const archivePost = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
 
     const post = await Post.findById(postId);
 
@@ -264,7 +265,7 @@ export const archivePost = asyncHandler(async (req, res) => {
 
 export const addReviewToPost = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req); // L'ID de l'utilisateur qui écrit l'avis
     const { commentaire, note } = req.body;
 
     if (!commentaire || !note) {
@@ -316,7 +317,7 @@ export const addReviewToPost = asyncHandler(async (req, res) => {
 
 
 export const getFavorites = asyncHandler(async (req, res) => {
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
 
     const user = await User.findOne({ clerkId: userId })
         .populate({
@@ -336,7 +337,7 @@ export const getFavorites = asyncHandler(async (req, res) => {
 
 export const addFavorite = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
 
     const user = await User.findOne({ clerkId: userId });
     if (!user) {
@@ -363,7 +364,7 @@ export const addFavorite = asyncHandler(async (req, res) => {
 
 export const removeFavorite = asyncHandler(async (req, res) => {
     const { postId } = req.params;
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
 
     const user = await User.findOne({ clerkId: userId });
     if (!user) {
@@ -385,7 +386,7 @@ export const removeFavorite = asyncHandler(async (req, res) => {
 });
 
 export const deletePost = asyncHandler(async (req, res) => {
-    const userId = req.userId; // User ID is set by the auth middleware
+    const { userId } = getAuth(req);
     const { postId } = req.params;
 
     const user = await User.findOne({ clerkId: userId });

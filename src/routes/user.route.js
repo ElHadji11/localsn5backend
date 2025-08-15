@@ -8,18 +8,16 @@ import {
     syncUser,
     becomeSeller,
     getSellerPosts,
-    verifyPasswordReset,
 } from '../controllers/user.controller.js';
 
 const router = express.Router();
 
 // ROUTES PUBLIQUES 
 router.get('/profile/:userId', getUserProfile);
-router.post("/sync", syncUser);
 router.get('/seller/:userId/posts', getSellerPosts);
-router.post('/verify-reset-token', verifyPasswordReset);
 
 //protected routes
+router.post("/sync", protectRoute, syncUser);
 router.get('/', protectRoute, getCurrentUser);
 router.put('/profile', protectRoute, updateUser);
 router.post('/become-seller', protectRoute, becomeSeller);

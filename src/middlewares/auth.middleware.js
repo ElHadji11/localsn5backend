@@ -1,24 +1,13 @@
-import { getAuth } from "@clerk/express";
+import { getAuth } from '@clerk/express'; // Assurez-vous d'importer getAuth
 
-export const protectRoute = async (req, res, next) => {
-    try {
-        const { userId } = getAuth(req);
+export const protectRoute = (req, res, next) => {
+    const { userId } = getAuth(req);
 
-        if (!userId) {
-            return res.status(401).json({
-                message: "Unauthorized - you must be logged in",
-                error: "No user ID found in request"
-            });
-        }
-
-        // Add user ID to request for use in controllers
-        req.userId = userId;
-        next();
-    } catch (error) {
-        console.error('Auth middleware error:', error);
-        return res.status(401).json({
-            message: "Unauthorized - invalid authentication",
-            error: error.message
-        });
+    if (!userId) {
+        console.log("No userId found in protectRoute"); // Debug
+        return res.status(401).json({ message: "Unauthorized - you must be logged in" });
     }
+
+    console.log("User authenticated, userId:", userId); // Debug
+    next();
 };
